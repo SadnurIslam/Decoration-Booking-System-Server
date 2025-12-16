@@ -57,6 +57,27 @@ async function run() {
     const paymentsCollection = db.collection("payments");
     const decoratorsCollection = db.collection("decorators");
 
+    // services apis
+    app.get("/services", async (req, res) => {
+        const { search, category, min, max, limit } = req.query;
+        const query = {};
+  
+        if (search) {
+          query.service_name = { $regex: search, $options: "i" };
+        }
+        if (category) {
+          query.category = category;
+        }
+        if (min && max) {
+          query.cost = { $gte: Number(min), $lte: Number(max) };
+        }
+  
+        let cursor = servicesCollection.find(query);
+        if (limit) cursor = cursor.limit(Number(limit));
+  
+        const result = await cursor.toArray();
+        res.send(result);
+    });
     
     
 
