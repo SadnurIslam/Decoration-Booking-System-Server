@@ -78,6 +78,13 @@ async function run() {
         const result = await cursor.toArray();
         res.send(result);
     });
+
+    app.get("/services/:id", async (req, res) => {
+        const service = await servicesCollection.findOne({
+          _id: new ObjectId(req.params.id),
+        });
+        res.send(service);
+      });
     
     
 
