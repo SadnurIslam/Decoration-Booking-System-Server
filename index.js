@@ -56,7 +56,7 @@ async function run() {
     const bookingsCollection = db.collection("bookings");
     const paymentsCollection = db.collection("payments");
     const decoratorsCollection = db.collection("decorators");
-    const servicesCategoriesCollection = db.collection("services_categories");
+    const servicesCategoriesCollection = db.collection("service_categories");
 
     // verify admin middleware
     const verifyAdmin = async (req, res, next) => {
