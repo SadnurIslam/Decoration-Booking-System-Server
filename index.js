@@ -57,6 +57,18 @@ async function run() {
     const paymentsCollection = db.collection("payments");
     const decoratorsCollection = db.collection("decorators");
 
+    // users api
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const exists = await usersCollection.findOne({ email: user.email });
+      if (exists) return res.send({ message: "User already exists" });
+
+      user.role = "user";
+      user.createdAt = new Date();
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
     // services apis
     app.get("/services", async (req, res) => {
         const { search, category, min, max, limit } = req.query;
