@@ -57,6 +57,16 @@ async function run() {
     const paymentsCollection = db.collection("payments");
     const decoratorsCollection = db.collection("decorators");
 
+    // verify admin middleware
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decodedEmail;
+      const user = await usersCollection.findOne({ email });
+      if (!user || user.role !== "admin") {
+        return res.status(403).send({ message: "Forbidden" });
+      }
+      next();
+    };
+
     // users api
     app.post("/users", async (req, res) => {
       const user = req.body;
