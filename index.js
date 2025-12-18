@@ -95,42 +95,112 @@ async function run() {
       res.send({ role: user?.role || "user" });
     });
 
-
-    app.get("/users", verifyFirebaseToken, async (req, res) => {
+    app.get("/users", verifyFirebaseToken, verifyAdmin, async (req, res) => {
       const users = await usersCollection.find().toArray();
       res.send(users);
     });
 
     // services apis
     app.get("/services", async (req, res) => {
-        const { search, category, min, max, limit } = req.query;
-        const query = {};
-  
-        if (search) {
-          query.service_name = { $regex: search, $options: "i" };
-        }
-        if (category) {
-          query.category = category;
-        }
-        if (min && max) {
-          query.cost = { $gte: Number(min), $lte: Number(max) };
-        }
-  
-        let cursor = servicesCollection.find(query);
-        if (limit) cursor = cursor.limit(Number(limit));
-  
-        const result = await cursor.toArray();
-        res.send(result);
+      const { search, category, min, max, limit } = req.query;
+      const query = {};
+
+      if (search) {
+        query.service_name = { $regex: search, $options: "i" };
+      }
+      if (category) {
+        query.category = category;
+      }
+      if (min && max) {
+        query.cost = { $gte: Number(min), $lte: Number(max) };
+      }
+
+      let cursor = servicesCollection.find(query);
+      if (limit) cursor = cursor.limit(Number(limit));
+
+      const result = await cursor.toArray();
+      res.send(result);
     });
 
     app.get("/services/:id", async (req, res) => {
-        const service = await servicesCollection.findOne({
+      const service = await servicesCollection.findOne({
+        _id: new ObjectId(req.params.id),
+      });
+      res.send(service);
+    });
+
+    app.post(
+      "/services",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const service = req.body;
+        service.createdByEmail = req.decodedEmail;
+        service.createdAt = new Date();
+        const result = await servicesCollection.insertOne(service);
+        res.send(result);
+      }
+    );
+
+    app.patch(
+      "/services/:id",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await servicesCollection.updateOne(
+          { _id: new ObjectId(req.params.id) },
+          { $set: req.body }
+        );
+        res.send(result);
+      }
+    );
+
+    app.delete(
+      "/services/:id",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await servicesCollection.deleteOne({
           _id: new ObjectId(req.params.id),
         });
-        res.send(service);
-      });
-    
-    
+        res.send(result);
+      }
+    );
+
+    // bookings apis
+    app.post("/bookings", verifyFirebaseToken, async (req, res) => {
+      const booking = req.body;
+      booking.userEmail = req.decodedEmail;
+      booking.status = "Pending";
+      booking.createdAt = new Date();
+      const result = await bookingsCollection.insertOne(booking);
+      res.send(result);
+      console.log(result);
+    });
+
+    app.get("/bookings", verifyFirebaseToken, async (req, res) => {
+      const email = req.query.email;
+      const query = email ? { userEmail: email } : {};
+      if (email && email !== req.decodedEmail) {
+        return res.status(403).send({ message: "Forbidden" });
+      }
+      const bookings = await bookingsCollection.find(query).toArray();
+      res.send(bookings);
+    });
+
+    app.patch(
+      "/bookings/:id/status",
+      verifyFirebaseToken,
+      verifyDecorator,
+      async (req, res) => {
+        const { status } = req.body;
+        const result = await bookingsCollection.updateOne(
+          { _id: new ObjectId(req.params.id) },
+          { $set: { status } }
+        );
+        res.send(result);
+      }
+    );
 
     console.log("StyleDecor server connected");
   } finally {
