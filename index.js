@@ -75,6 +75,12 @@ async function run() {
       res.send({ role: user?.role || "user" });
     });
 
+
+    app.get("/users", verifyFirebaseToken, async (req, res) => {
+      const users = await usersCollection.find().toArray();
+      res.send(users);
+    });
+
     // services apis
     app.get("/services", async (req, res) => {
         const { search, category, min, max, limit } = req.query;
