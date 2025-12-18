@@ -69,6 +69,12 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/users/:email/role", async (req, res) => {
+      const email = req.params.email;
+      const user = await usersCollection.findOne({ email });
+      res.send({ role: user?.role || "user" });
+    });
+
     // services apis
     app.get("/services", async (req, res) => {
         const { search, category, min, max, limit } = req.query;
