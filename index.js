@@ -56,6 +56,7 @@ async function run() {
     const bookingsCollection = db.collection("bookings");
     const paymentsCollection = db.collection("payments");
     const decoratorsCollection = db.collection("decorators");
+    const servicesCategoriesCollection = db.collection("services_categories");
 
     // verify admin middleware
     const verifyAdmin = async (req, res, next) => {
@@ -203,6 +204,19 @@ async function run() {
     );
 
     // created decorators api
+    app.get("/decorators", verifyFirebaseToken, async (req, res) => {
+      const email = req.query.email;
+      if (email) {
+        if (email !== req.decodedEmail) {
+          return res.status(403).send({ message: "Forbidden" });
+        }
+        const decorator = await decoratorsCollection.findOne({ email });
+        return res.send(decorator);
+      }
+      const decorators = await decoratorsCollection.find().toArray();
+      res.send(decorators);
+    });
+
     app.get("/decorators/top", async (req, res) => {
       const decorators = await decoratorsCollection
         .find({ approved: true })
@@ -215,7 +229,6 @@ async function run() {
     app.post(
       "/decorators",
       verifyFirebaseToken,
-      verifyAdmin,
       async (req, res) => {
         const decorator = req.body;
         decorator.approved = false;
@@ -247,6 +260,24 @@ async function run() {
         res.send(result);
       }
     );
+
+    app.patch("/decorators/:id/reject", verifyFirebaseToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const decorator = await decoratorsCollection.findOne({
+        _id: new ObjectId(id),
+      });
+
+      await usersCollection.updateOne(
+        { email: decorator.email },
+        { $set: { role: "user" } }
+      );
+
+      const result = await decoratorsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { approved: false, rejected: true } }
+      );
+      res.send(result);
+    });
 
     // payment related apis
     app.post("/create-payment-intent", async (req, res) => {
