@@ -248,6 +248,80 @@ async function run() {
       }
     );
 
+    // payment related apis
+    app.post("/create-payment-intent", async (req, res) => {
+      const booking = req.body;
+      console.log(booking);
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: booking.serviceName,
+              },
+              unit_amount: booking.amount * 100,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        customer_email: booking.userEmail,
+
+        metadata: {
+          bookingId: booking.bookingId,
+        },
+        success_url: `${process.env.SITE_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.SITE_DOMAIN}/dashboard/payment-cancel`,
+      });
+
+      res.send({ url: session.url });
+    });
+
+    app.patch("/payment-success", async (req, res) => {
+      const session = await stripe.checkout.sessions.retrieve(
+        req.query.session_id
+      );
+
+      if (session.payment_status !== "paid") {
+        return res.send({ success: false });
+      }
+      console.log(session.metadata);
+      const bookingId = session.metadata.bookingId;
+      const transactionId = session.payment_intent;
+      const existingPayment = await paymentsCollection.findOne({
+        transactionId,
+      });
+
+      if (existingPayment) {
+        return res.send({ success: true, message: "Payment already recorded" });
+      }
+
+      await bookingsCollection.updateOne(
+        { _id: new ObjectId(bookingId) },
+        {
+          $set: {
+            payment_status: "paid",
+            paidAt: new Date(),
+          },
+        }
+      );
+
+      await paymentsCollection.insertOne({
+        bookingId: bookingId,
+        transactionId: session.payment_intent,
+        amount: session.amount_total / 100,
+        email: session.customer_email,
+        paidAt: new Date(),
+      });
+
+      res.send({ success: true });
+    });
+
+
+    
+
     console.log("StyleDecor server connected");
   } finally {
   }
