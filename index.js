@@ -319,8 +319,11 @@ async function run() {
       res.send({ success: true });
     });
 
-
-    
+    // services categories
+    app.get("/services-categories", async (req, res) => {
+      const categories = await servicesCategoriesCollection.find().toArray();
+      res.send(categories);
+    });
 
     console.log("StyleDecor server connected");
   } finally {
