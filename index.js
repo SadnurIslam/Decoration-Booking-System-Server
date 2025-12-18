@@ -67,6 +67,16 @@ async function run() {
       next();
     };
 
+    // verify decorator middleware
+    const verifyDecorator = async (req, res, next) => {
+      const email = req.decodedEmail;
+      const user = await usersCollection.findOne({ email });
+      if (!user || user.role !== "decorator") {
+        return res.status(403).send({ message: "Forbidden" });
+      }
+      next();
+    };
+
     // users api
     app.post("/users", async (req, res) => {
       const user = req.body;
