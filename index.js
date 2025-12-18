@@ -47,7 +47,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("style_decor_db");
 
@@ -318,6 +318,22 @@ async function run() {
 
       res.send({ success: true });
     });
+
+    app.get("/payments", verifyFirebaseToken, async (req, res) => {
+      const email = req.query.email;
+    
+      if (email !== req.decodedEmail) {
+        return res.status(403).send({ message: "Forbidden" });
+      }
+    
+      const payments = await paymentsCollection
+        .find({ email })
+        .sort({ paidAt: -1 })
+        .toArray();
+    
+      res.send(payments);
+    });
+    
 
     // services categories
     app.get("/services-categories", async (req, res) => {
