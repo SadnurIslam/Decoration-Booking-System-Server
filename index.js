@@ -202,6 +202,52 @@ async function run() {
       }
     );
 
+    // created decorators api
+    app.get("/decorators/top", async (req, res) => {
+      const decorators = await decoratorsCollection
+        .find({ approved: true })
+        .sort({ rating: -1 })
+        .limit(8)
+        .toArray();
+      res.send(decorators);
+    });
+
+    app.post(
+      "/decorators",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const decorator = req.body;
+        decorator.approved = false;
+        decorator.createdAt = new Date();
+        const result = await decoratorsCollection.insertOne(decorator);
+        res.send(result);
+      }
+    );
+
+    app.patch(
+      "/decorators/:id/approve",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const decorator = await decoratorsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        await usersCollection.updateOne(
+          { email: decorator.email },
+          { $set: { role: "decorator" } }
+        );
+
+        const result = await decoratorsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { approved: true } }
+        );
+        res.send(result);
+      }
+    );
+
     console.log("StyleDecor server connected");
   } finally {
   }
