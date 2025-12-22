@@ -203,6 +203,44 @@ async function run() {
       }
     );
 
+    app.delete("/bookings/:id", verifyFirebaseToken, async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const booking = await bookingsCollection.findOne({
+        _id: new ObjectId(id),
+      });
+      if (booking.userEmail !== req.decodedEmail) {
+        return res.status(403).send({ message: "Forbidden" });
+      }
+      const result = await bookingsCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+      console.log(result);
+      res.send(result);
+    });
+
+    app.patch(
+      "/bookings/:id/assign",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { decoratorEmail } = req.body;
+
+        const result = await bookingsCollection.updateOne(
+          { _id: new ObjectId(req.params.id) },
+          {
+            $set: {
+              decoratorEmail,
+              status: "Assigned",
+              assignedAt: new Date(),
+            },
+          }
+        );
+
+        res.send(result);
+      }
+    );
+
     // created decorators api
     app.get("/decorators", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
@@ -226,17 +264,13 @@ async function run() {
       res.send(decorators);
     });
 
-    app.post(
-      "/decorators",
-      verifyFirebaseToken,
-      async (req, res) => {
-        const decorator = req.body;
-        decorator.approved = false;
-        decorator.createdAt = new Date();
-        const result = await decoratorsCollection.insertOne(decorator);
-        res.send(result);
-      }
-    );
+    app.post("/decorators", verifyFirebaseToken, async (req, res) => {
+      const decorator = req.body;
+      decorator.approved = false;
+      decorator.createdAt = new Date();
+      const result = await decoratorsCollection.insertOne(decorator);
+      res.send(result);
+    });
 
     app.patch(
       "/decorators/:id/approve",
@@ -261,23 +295,28 @@ async function run() {
       }
     );
 
-    app.patch("/decorators/:id/reject", verifyFirebaseToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const decorator = await decoratorsCollection.findOne({
-        _id: new ObjectId(id),
-      });
+    app.patch(
+      "/decorators/:id/reject",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const decorator = await decoratorsCollection.findOne({
+          _id: new ObjectId(id),
+        });
 
-      await usersCollection.updateOne(
-        { email: decorator.email },
-        { $set: { role: "user" } }
-      );
+        await usersCollection.updateOne(
+          { email: decorator.email },
+          { $set: { role: "user" } }
+        );
 
-      const result = await decoratorsCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { approved: false, rejected: true } }
-      );
-      res.send(result);
-    });
+        const result = await decoratorsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { approved: false, rejected: true } }
+        );
+        res.send(result);
+      }
+    );
 
     // payment related apis
     app.post("/create-payment-intent", async (req, res) => {
@@ -325,7 +364,7 @@ async function run() {
         _id: new ObjectId(bookingId),
       });
 
-      if(booking?.payment_status === "paid"){
+      if (booking?.payment_status === "paid") {
         return res.send({ success: true, message: "Payment already recorded" });
       }
 
@@ -361,19 +400,18 @@ async function run() {
 
     app.get("/payments", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
-    
+
       if (email !== req.decodedEmail) {
         return res.status(403).send({ message: "Forbidden" });
       }
-    
+
       const payments = await paymentsCollection
         .find({ email })
         .sort({ paidAt: -1 })
         .toArray();
-    
+
       res.send(payments);
     });
-    
 
     // services categories
     app.get("/services-categories", async (req, res) => {
