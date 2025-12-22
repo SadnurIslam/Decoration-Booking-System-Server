@@ -320,6 +320,15 @@ async function run() {
       }
       console.log(session.metadata);
       const bookingId = session.metadata.bookingId;
+
+      const booking = await bookingsCollection.findOne({
+        _id: new ObjectId(bookingId),
+      });
+
+      if(booking?.payment_status === "paid"){
+        return res.send({ success: true, message: "Payment already recorded" });
+      }
+
       const transactionId = session.payment_intent;
       const existingPayment = await paymentsCollection.findOne({
         transactionId,
