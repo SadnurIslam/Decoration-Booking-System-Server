@@ -181,6 +181,13 @@ async function run() {
 
     app.get("/bookings", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
+      const decoratorEmail = req.query.decoratorEmail;
+      if (decoratorEmail) {
+        const bookings = await bookingsCollection
+          .find({ decoratorEmail })
+          .toArray();
+        return res.send(bookings);
+      }
       const query = email ? { userEmail: email } : {};
       if (email && email !== req.decodedEmail) {
         return res.status(403).send({ message: "Forbidden" });
@@ -195,10 +202,17 @@ async function run() {
       verifyDecorator,
       async (req, res) => {
         const { status } = req.body;
+
         const result = await bookingsCollection.updateOne(
           { _id: new ObjectId(req.params.id) },
-          { $set: { status } }
+          {
+            $set: {
+              status,
+              updatedAt: new Date(),
+            },
+          }
         );
+
         res.send(result);
       }
     );
@@ -327,7 +341,7 @@ async function run() {
         line_items: [
           {
             price_data: {
-              currency: "usd",
+              currency: "bdt",
               product_data: {
                 name: booking.serviceName,
               },
