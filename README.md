@@ -1,9 +1,3 @@
-
----
-
-# 🔵 SERVER README (`README.md` – Backend)
-
-```md
 # 🛠 StyleDecor – Decoration Booking System (Server)
 
 A RESTful backend API for managing decoration services, bookings, payments, and role-based access control.
